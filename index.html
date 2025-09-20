@@ -11,7 +11,8 @@
   <title>고로아와세 변환기</title>
   <script>
     /**
-     * 아이디어: 텍스트 입력창에 일본어가 감지되면 첫번쨰 일본어 글자가 강조 표시되면서 밑에 가능한 숫자들이 나열됨. 그중 하나를 클릭하면 일본어 글자가 해당 숫자로 대체되고 다음 일본어 글자로 이동. 이것을 반복
+     * 아이디어: 텍스트 입력창에 일본어가 감지되면 첫번쨰 일본어 글자가 강조 표시되면서 밑에 가능한 숫자들이 나열됨. 그중 하나를 클릭하면 일본어 글자가 해당 숫자로 대체되고 다음 일본어 글자로 이동. 이것을 반복 
+     * 밑의 복사 붙여넣기 기능도 추가바람
      */
   </script>
 </head>
@@ -19,8 +20,17 @@
   <body>
     <main class="container">
       <h1>고로아와세 변환기</h1>
-      <textarea type="text" id="text" placeholder="텍스트를 입력하세요"></textarea>
-      <textarea id="result"></textarea>
+      <form role="group">
+        <textarea type="text" id="text" placeholder="텍스트를 입력하세요"></textarea>
+        <button type="button">붙여넣기</button>
+      </form>
+      <div>
+        대충 숫자들
+      </div>
+      <from role="group">
+        <textarea id="result"></textarea>
+        <button type="button">복사</button>
+      </from>
     </main>
   </body>
 </html>
