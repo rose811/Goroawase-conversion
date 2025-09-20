@@ -4,33 +4,150 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="color-scheme" content="light dark">
-  <link
-  rel="stylesheet"
-  href="https://cdn.jsdelivr.net/npm/@picocss/pico@2/css/pico.min.css"
-  >
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@picocss/pico@2/css/pico.min.css">
   <title>고로아와세 변환기</title>
+  <style>
+    #suggestions button {
+      margin: 0.25rem;
+    }
+    main > article, main > div {
+      margin-bottom: 1.5rem;
+    }
+  </style>
+</head>
+<body>
+  <main class="container">
+    <h1>고로아와세 변환기</h1>
+
+    <article>
+      <label for="text">일본어 텍스트</label>
+      <textarea id="text" placeholder="ここにテキストを入力してください"></textarea>
+      <footer>
+        <button id="paste-button" class="secondary">붙여넣기</button>
+      </footer>
+    </article>
+    
+    <div id="suggestions" aria-label="변환 제안">
+      <!-- 숫자 제안이 여기에 표시됩니다 -->
+    </div>
+    
+    <article>
+       <label for="result">변환 결과</label>
+       <textarea id="result" readonly placeholder="変換結果"></textarea>
+       <footer>
+         <button id="copy-button">복사</button>
+       </footer>
+    </article>
+  </main>
+
   <script>
     /**
      * 아이디어: 텍스트 입력창에 일본어가 감지되면 첫번쨰 일본어 글자가 강조 표시되면서 밑에 가능한 숫자들이 나열됨. 그중 하나를 클릭하면 일본어 글자가 해당 숫자로 대체되고 다음 일본어 글자로 이동. 이것을 반복 
      * 밑의 복사 붙여넣기 기능도 추가바람
      */
+    document.addEventListener('DOMContentLoaded', () => {
+        const textInput = document.getElementById('text');
+        const resultOutput = document.getElementById('result');
+        const suggestionsDiv = document.getElementById('suggestions');
+        const pasteButton = document.getElementById('paste-button');
+        const copyButton = document.getElementById('copy-button');
+
+        const goroMap = {
+            'お': ['0','1','2','3'], 'オ': ['0'], 'を': ['0'], 'ヲ': ['0'], 'れ': ['0'], 'レ': ['0'],
+            'い': ['1'], 'イ': ['1'], 'ひ': ['1'], 'ヒ': ['1'],
+            'に': ['2'], 'ニ': ['2'], 'ふ': ['2'], 'フ': ['2'], 'じ': ['2'], 'ジ': ['2'], 'つ': ['2'], 'ツ': ['2'],
+            'さ': ['3'], 'サ': ['3'], 'み': ['3'], 'ミ': ['3'], 'さん': ['3'], 'サン': ['3'],
+            'し': ['4'], 'シ': ['4'], 'よ': ['4'], 'ヨ': ['4'],
+            'ご': ['5'], 'ゴ': ['5'], 'こ': ['5'], 'コ': ['5'],
+            'ろ': ['6'], 'ロ': ['6'], 'む': ['6'], 'ム': ['6'],
+            'な': ['7'], 'ナ': ['7'],
+            'は': ['8'], 'ハ': ['8'], 'や': ['8'], 'ヤ': ['8'], 'ば': ['8'], 'バ': ['8'], 'ぱ': ['8'], 'パ': ['8'],
+            'く': ['9'], 'ク': ['9'], 'ぐ': ['9'], 'グ': ['9'],
+            'と': ['10'], 'ト': ['10']
+        };
+
+        let currentIndex = 0;
+        let sourceText = '';
+
+        textInput.addEventListener('input', (e) => {
+            sourceText = e.target.value;
+            currentIndex = 0;
+            resultOutput.value = '';
+            suggestionsDiv.innerHTML = '<p><em>변환할 텍스트를 입력하세요...</em></p>';
+            if (sourceText.length > 0) {
+              processNextChar();
+            }
+        });
+
+        pasteButton.addEventListener('click', async () => {
+            try {
+                const text = await navigator.clipboard.readText();
+                textInput.value = text;
+                textInput.dispatchEvent(new Event('input', { bubbles: true }));
+            } catch (err) {
+                console.error('Failed to read clipboard contents: ', err);
+                alert('클립보드에서 텍스트를 붙여넣는 데 실패했습니다.');
+            }
+        });
+
+        copyButton.addEventListener('click', async () => {
+            if (!resultOutput.value) return;
+            try {
+                await navigator.clipboard.writeText(resultOutput.value);
+                alert('결과가 클립보드에 복사되었습니다!');
+            } catch (err) {
+                console.error('Failed to copy text: ', err);
+                alert('결과를 복사하는 데 실패했습니다.');
+            }
+        });
+
+        function processNextChar() {
+            suggestionsDiv.innerHTML = '';
+            if (currentIndex >= sourceText.length) {
+                textInput.setSelectionRange(sourceText.length, sourceText.length);
+                suggestionsDiv.innerHTML = '<p>✅ 변환 완료!</p>';
+                return;
+            }
+
+            const char = sourceText[currentIndex];
+            textInput.focus();
+            textInput.setSelectionRange(currentIndex, currentIndex + 1);
+
+            const possibleNumbers = goroMap[char];
+
+            if (possibleNumbers && possibleNumbers.length > 0) {
+                const originalCharButton = document.createElement('button');
+                originalCharButton.textContent = `"${char}" (원문자)`;
+                originalCharButton.classList.add('secondary');
+                originalCharButton.addEventListener('click', () => {
+                    handleSelection(char);
+                });
+                suggestionsDiv.appendChild(originalCharButton);
+
+                possibleNumbers.forEach(num => {
+                    const button = document.createElement('button');
+                    button.textContent = num;
+                    button.addEventListener('click', () => {
+                        handleSelection(num);
+                    });
+                    suggestionsDiv.appendChild(button);
+                });
+            } else {
+                resultOutput.value += char;
+                currentIndex++;
+                requestAnimationFrame(processNextChar);
+            }
+        }
+
+        function handleSelection(selectedValue) {
+            resultOutput.value += selectedValue;
+            currentIndex++;
+            processNextChar();
+        }
+        
+        // Initial placeholder
+        suggestionsDiv.innerHTML = '<p><em>변환할 텍스트를 입력하세요...</em></p>';
+    });
   </script>
-</head>
-<html>
-  <body>
-    <main class="container">
-      <h1>고로아와세 변환기</h1>
-      <form role="group">
-        <textarea type="text" id="text" placeholder="텍스트를 입력하세요"></textarea>
-        <button type="button">붙여넣기</button>
-      </form>
-      <div>
-        대충 숫자들
-      </div>
-      <from role="group">
-        <textarea id="result"></textarea>
-        <button type="button">복사</button>
-      </from>
-    </main>
-  </body>
+</body>
 </html>
